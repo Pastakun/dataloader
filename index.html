@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>画像デコード</title>
+</head>
+<body>
+    <input type="file" id="imageInput" accept="image/*">
+    <button onclick="decodeImage()">デコード</button>
+    <a id="downloadLink" style="display: none;">ダウンロード</a>
+    <script>
+        async function decodeImage() {
+            const input = document.getElementById('imageInput');
+            if (!input.files.length) {
+                alert('画像を選択してください');
+                return;
+            }
+            
+            const file = input.files[0];
+            const img = new Image();
+            img.src = URL.createObjectURL(file);
+            await img.decode();
+            
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
+            
+            const imageData = ctx.getImageData(0, 0, img.width, img.height).data;
+            let pixelIndex = 0;
+            let outputData = '';
+
+            for (let i = 0; i < 29959; i++) {
+                let num = 0n;
+                let multiplier = 1n;
+
+                for (let j = 0; j < 35; j++) {
+                    if (pixelIndex >= imageData.length) break;
+                    
+                    const r = imageData[pixelIndex];
+                    const g = imageData[pixelIndex + 1];
+                    const b = imageData[pixelIndex + 2];
+                    
+                    const color = (BigInt(r) << 16n) | (BigInt(g) << 8n) | BigInt(b);
+                    num += color * multiplier;
+
+                    pixelIndex += 4;
+                    multiplier *= 16777216n;
+                }
+
+                outputData += num.toString() + '\n';
+            }
+
+            const blob = new Blob([outputData], { type: 'text/plain' });
+            const link = document.getElementById('downloadLink');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'output.txt';
+            link.style.display = 'block';
+            link.innerText = '結果をダウンロード';
+        }
+    </script>
+</body>
+</html>
